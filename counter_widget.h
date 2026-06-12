@@ -42,6 +42,10 @@ public:
                                              });
   }
 
+  ~CounterWidget() override {
+    subscription.dispose();
+  }
+
 private:
   CounterViewModel viewModel;
   rpp::composite_disposable_wrapper subscription;
