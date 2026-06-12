@@ -1,5 +1,8 @@
+#include "command.h"
 #include "counter_view_model.h"
+#include <QDebug>
 #include <QWidget>
+#include <QtCore/qglobal.h>
 #include <QtCore/qnamespace.h>
 #include <QtCore/qobject.h>
 #include <QtWidgets/qboxlayout.h>
@@ -19,7 +22,7 @@ public:
     setWindowTitle("Qt5 MVVM Counter Demo");
     resize(320, 180);
 
-    auto label{new QLabel};
+    auto label{new QLabel("Count: 0")};
     auto incButton{new QPushButton{"increment"}};
     auto resetButton{new QPushButton{"reset"}};
 
@@ -31,22 +34,26 @@ public:
     layout->addWidget(resetButton);
 
     QObject::connect(incButton, &QPushButton::clicked, this,
-                     [this]() { viewModel.increment(); });
+                     [this]() { viewModel.increment_command.execute(); });
     QObject::connect(resetButton, &QPushButton::clicked, this,
-                     [this]() { viewModel.reset(); });
+                     [this]() { viewModel.reset_command.execute(); });
 
-    subscription = viewModel.count_observable() |
-                   rpp::operators::subscribe(rpp::composite_disposable_wrapper{},
-                                             [label](int value) {
-                                               label->setText(QString{"Count: %1"}.arg(value));
-                                             });
-  }
+    // count_subscription =
+    viewModel.count_observable() |
+        rpp::operators::subscribe([label](int value) {
+          qDebug() << "Count: " << value;
+          label->setText(QString{"Count: %1"}.arg(value));
+        });
 
-  ~CounterWidget() override {
-    subscription.dispose();
+    // command_subscription =
+    viewModel.increment_command.states() |
+        rpp::operators::subscribe([label](CommandState const &state) {
+          qDebug() << (state.running ? "working..." : "completed");
+        });
   }
 
 private:
   CounterViewModel viewModel;
-  rpp::composite_disposable_wrapper subscription;
+  rpp::composite_disposable_wrapper count_subscription;
+  rpp::composite_disposable_wrapper command_subscription;
 };
