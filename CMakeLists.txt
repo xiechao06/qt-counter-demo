@@ -8,6 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets LinguistTools)
+find_package(RPP CONFIG REQUIRED)
 
 set(TS_FILES counter_zh_CN.ts)
 
@@ -16,6 +17,9 @@ add_executable(${PROJECT_NAME}
     mainwindow.cpp
     mainwindow.h
     mainwindow.ui
+    counter_widget.h
+    counter_model.h
+    counter_view_model.h
     ${TS_FILES}
 )
 
@@ -23,6 +27,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt5::Core
     Qt5::Gui
     Qt5::Widgets
+    RPP::rpp
+    RPP::rppqt
 )
 
 set_target_properties(counter PROPERTIES
