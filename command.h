@@ -1,29 +1,39 @@
 #pragma once
 
+#include "result.h"
 #include <exception>
 #include <functional>
 #include <iostream>
 #include <rpp/rpp.hpp>
+#include <type_traits>
 
-struct CommandState {
+template <typename T> struct CommandSnapshot {
   bool running{false};
   bool completed{false};
-  std::exception_ptr error;
+  Result<T> result = Result<T>::success(T{});
 
   void clear() {
     running = false;
     completed = false;
-    error = {};
+    result = Result<T>::success(T{});
   }
 };
 
-class Command0 {
+template <> struct CommandSnapshot<void> {
+  bool running{false};
+  bool completed{false};
+  Result<void> result = Result<void>::success();
+};
+
+template <typename T> class Command0 {
 public:
-  using Action = std::function<void()>;
-  CommandState state;
+  //   using Action = std::conditional_t<std::is_void_v<T>,
+  //   std::function<void()>, std::function<T()>>;
+  using Action = std::function<T()>;
+  CommandSnapshot<T> state;
 
   explicit Command0(Action action)
-      : action{std::move(action)}, state_subject{CommandState{}} {}
+      : action{std::move(action)}, state_subject{CommandSnapshot<T>{}} {}
 
   void execute() {
     std::cerr << "Command executed " << std::endl;
@@ -31,19 +41,22 @@ public:
       return;
     }
     state.running = true;
-    publish_state();
+    publish();
 
     try {
-      action();
+      if constexpr (std::is_void_v<T>) {
+        action();
+        state.result = Result<void>::success();
+      } else {
+        state.result = Result<T>::success(action());
+      }
       state.completed = true;
-      state.error = {};
     } catch (std::exception &e) {
       state.completed = false;
-      state.error = std::current_exception();
     }
 
     state.running = false;
-    publish_state();
+    publish();
   }
 
   void clear() { state.clear(); }
@@ -52,7 +65,7 @@ public:
 
 private:
   Action action;
-  rpp::subjects::behavior_subject<CommandState> state_subject;
+  rpp::subjects::behavior_subject<CommandSnapshot<T>> state_subject;
 
-  void publish_state() { state_subject.get_observer().on_next(state); }
+  void publish() { state_subject.get_observer().on_next(state); }
 };

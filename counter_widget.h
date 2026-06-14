@@ -47,7 +47,7 @@ public:
 
     // command_subscription =
     viewModel.increment_command.states() |
-        rpp::operators::subscribe([label](CommandState const &state) {
+        rpp::operators::subscribe([label](CommandSnapshot<int> const &state) {
           qDebug() << (state.running ? "working..." : "completed");
         });
   }
