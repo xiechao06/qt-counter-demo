@@ -9,6 +9,7 @@ set(CMAKE_AUTOUIC ON)
 
 find_package(Qt5 REQUIRED COMPONENTS Core Gui Widgets LinguistTools)
 find_package(RPP CONFIG REQUIRED)
+find_package(tl-expected REQUIRED)
 
 set(TS_FILES counter_zh_CN.ts)
 
@@ -29,6 +30,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
     Qt5::Widgets
     RPP::rpp
     RPP::rppqt
+    tl::expected
 )
 
 set_target_properties(counter PROPERTIES

@@ -1,35 +1,32 @@
 #pragma once
 
-#include "result.h"
+#include "command_error.h"
 #include <exception>
 #include <functional>
 #include <iostream>
+#include <optional>
 #include <rpp/rpp.hpp>
-#include <type_traits>
+#include <system_error>
+#include <tl/expected.hpp>
+
+template <typename T>
+using command_result = tl::expected<T, std::error_code>;
 
 template <typename T> struct CommandSnapshot {
   bool running{false};
   bool completed{false};
-  Result<T> result = Result<T>::success(T{});
+  std::optional<command_result<T>> result = std::nullopt;
 
   void clear() {
     running = false;
     completed = false;
-    result = Result<T>::success(T{});
+    result = std::nullopt;
   }
-};
-
-template <> struct CommandSnapshot<void> {
-  bool running{false};
-  bool completed{false};
-  Result<void> result = Result<void>::success();
 };
 
 template <typename T> class Command0 {
 public:
-  //   using Action = std::conditional_t<std::is_void_v<T>,
-  //   std::function<void()>, std::function<T()>>;
-  using Action = std::function<T()>;
+  using Action = std::function<command_result<T>()>;
   CommandSnapshot<T> state;
 
   explicit Command0(Action action)
@@ -38,21 +35,20 @@ public:
   void execute() {
     std::cerr << "Command executed " << std::endl;
     if (state.running) {
+      state.result = tl::make_unexpected(std::error_code{CommandError::Busy});
+      publish();
       return;
     }
     state.running = true;
     publish();
 
     try {
-      if constexpr (std::is_void_v<T>) {
-        action();
-        state.result = Result<void>::success();
-      } else {
-        state.result = Result<T>::success(action());
-      }
+      state.result = action();
       state.completed = true;
     } catch (std::exception &e) {
-      state.completed = false;
+      state.result = tl::make_unexpected(
+          std::error_code{CommandError::InternalFailure});
+      state.completed = true;
     }
 
     state.running = false;

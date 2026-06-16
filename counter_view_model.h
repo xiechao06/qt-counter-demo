@@ -6,6 +6,7 @@
 #include <QObject>
 #include <QtCore/qobject.h>
 #include <QtCore/qobjectdefs.h>
+
 #include <rpp/rpp.hpp>
 #include <rpp/subjects/behavior_subject.hpp>
 
@@ -14,7 +15,7 @@ class CounterViewModel : public QObject {
 public:
   explicit CounterViewModel(QObject *parent = nullptr)
       : QObject(parent), increment_command([this]() { return increment(); }),
-        reset_command([this]() { reset(); }) {
+        reset_command([this]() { return reset(); }) {
     count_subject.get_observer().on_next(model.value);
   }
 
@@ -29,14 +30,15 @@ private:
   CounterModel model;
   rpp::subjects::behavior_subject<int> count_subject{0};
 
-  int increment() {
+  command_result<int> increment() {
     const auto newValue{model.increment()};
     qDebug() << "do increment with: " << newValue;
     count_subject.get_observer().on_next(newValue);
     return newValue;
   }
-  void reset() {
+  command_result<void> reset() {
     model.reset();
     count_subject.get_observer().on_next(model.value);
+    return command_result<void>{};
   };
 };
